@@ -31,8 +31,9 @@ function el(tag,attrs,parent){let e=document.createElementNS(NS,tag);for(let k i
 // Keep the original spatial arrangement and arrow directions.
 const ctx=document.createElement('canvas').getContext('2d');ctx.font='16px Arial';
 for(const [id,x,y,w,originalH,label,priority] of data){
+ const fontSize=priority?18:16,lineHeight=priority?24:21,fontWeight=priority?700:400;ctx.font=`${fontWeight} ${fontSize}px Arial`;
  let lines=[];for(const paragraph of label.split('\n')){if(!paragraph){lines.push('');continue}let line='';for(const word of paragraph.split(' ')){let test=(line+' '+word).trim();if(ctx.measureText(test).width>w-32&&line){lines.push(line);line=word}else line=test}lines.push(line)}
- const h=Math.max(originalH,lines.length*21+32);nodes.set(id,{id,x,y,w,h,label,priority,lines});
+ const h=Math.max(originalH,lines.length*lineHeight+32);nodes.set(id,{id,x,y,w,h,label,priority,lines,fontSize,fontWeight,lineHeight});
 }
 for(const [a,b] of links){const A=nodes.get(a),B=nodes.get(b);const dx=B.x-A.x,dy=B.y-A.y;let ta=Math.min(A.w/2/Math.abs(dx||.001),A.h/2/Math.abs(dy||.001)),tb=Math.min(B.w/2/Math.abs(dx||.001),B.h/2/Math.abs(dy||.001));let x1=A.x+dx*ta,y1=A.y+dy*ta,x2=B.x-dx*tb,y2=B.y-dy*tb;let d=`M${x1},${y1} L${x2},${y2}`;
  if(a===1&&b===8)d=`M${A.x-20},${A.y-A.h/2} C220,260 290,200 ${B.x-B.w/2},${B.y+10}`;
@@ -44,7 +45,7 @@ for(const [a,b] of links){const A=nodes.get(a),B=nodes.get(b);const dx=B.x-A.x,d
  if(a===17&&b===5)d=`M${A.x+20},${A.y-A.h/2} C430,1030 570,1090 ${B.x-45},${B.y-B.h/2}`;
  let p=el('path',{d,class:'edge','marker-end':'url(#arrow)'},document.querySelector('#edges'));let hit=el('path',{d,class:'hit'},document.querySelector('#edges'));hit.addEventListener('click',()=>{if(!dragged)focus(selected===b?a:b)});paths.push({a,b,p,hit});
 }
-for(const n of nodes.values()){let g=el('g',{class:'node'+(n.priority?' priority':''),tabindex:0,role:'button','aria-label':n.label,transform:`translate(${n.x-n.w/2},${n.y-n.h/2})`},document.querySelector('#nodes'));el('rect',{width:n.w,height:n.h,rx:13},g);let text=el('text',{class:'text','text-anchor':'middle',x:n.w/2,y:n.h/2-(n.lines.length-1)*10.5+5},g);n.lines.forEach((line,i)=>{let t=el('tspan',{x:n.w/2,dy:i?21:0},text);t.textContent=line});g.onclick=()=>{if(!dragged)focus(n.id)};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();focus(n.id)}};n.g=g}
+for(const n of nodes.values()){let g=el('g',{class:'node'+(n.priority?' priority':''),tabindex:0,role:'button','aria-label':n.label,transform:`translate(${n.x-n.w/2},${n.y-n.h/2})`},document.querySelector('#nodes'));el('rect',{width:n.w,height:n.h,rx:13},g);let text=el('text',{class:'text',style:`font-size:${n.fontSize}px;font-weight:${n.fontWeight}`,'text-anchor':'middle',x:n.w/2,y:n.h/2-(n.lines.length-1)*n.lineHeight/2+n.fontSize*.33},g);n.lines.forEach((line,i)=>{let t=el('tspan',{x:n.w/2,dy:i?n.lineHeight:0},text);t.textContent=line});g.onclick=()=>{if(!dragged)focus(n.id)};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();focus(n.id)}};n.g=g}
 function draw(){scene.setAttribute('transform',`translate(${camera.x},${camera.y}) scale(${camera.s})`);document.querySelector('#scale').value=Math.round(camera.s*100)+'%'}
 function move(target,smooth=true){cancelAnimationFrame(anim);if(!smooth||matchMedia('(prefers-reduced-motion: reduce)').matches){camera=target;draw();return}let start={...camera},t0=performance.now();function frame(t){let p=Math.min(1,(t-t0)/460),u=1-Math.pow(1-p,3);for(let k of ['x','y','s'])camera[k]=start[k]+(target[k]-start[k])*u;draw();if(p<1)anim=requestAnimationFrame(frame)}anim=requestAnimationFrame(frame)}
 function remember(){history.push({selected,camera:{...camera}});back.disabled=false}
